@@ -57,8 +57,10 @@ class EquipmentService:
             if follow_enabled:
                 self._set_constraint_side(config, side)
         elif equipment_name == "Sword":
-            require_attribute(self.cmds, config.constraint, "nodeState")
-            self.cmds.setAttr(attribute(config.constraint, "nodeState"), 0)
+            constraint = require_attribute(
+                self.cmds, config.constraint, "nodeState"
+            )
+            self.cmds.setAttr(attribute(constraint, "nodeState"), 0)
             self._set_space(config, 1 if side is Side.LEFT else 0)
         else:
             self._set_space(config, 0 if side is Side.LEFT else 1)
@@ -72,9 +74,11 @@ class EquipmentService:
             raise EquipmentAttributeError(
                 "No space attribute configured for {}".format(config.name)
             )
-        require_attribute(self.cmds, config.control, config.space_attribute)
+        control = require_attribute(
+            self.cmds, config.control, config.space_attribute
+        )
         value = self.cmds.getAttr(
-            attribute(config.control, config.space_attribute)
+            attribute(control, config.space_attribute)
         )
         if value not in (0, 1):
             raise EquipmentAttributeError(
@@ -122,9 +126,11 @@ class EquipmentService:
                 for alias in self._constraint_aliases(config.constraint):
                     self.cmds.setAttr(attribute(config.constraint, alias), 0)
         else:
-            require_attribute(self.cmds, config.constraint, "nodeState")
+            constraint = require_attribute(
+                self.cmds, config.constraint, "nodeState"
+            )
             self.cmds.setAttr(
-                attribute(config.constraint, "nodeState"),
+                attribute(constraint, "nodeState"),
                 0 if enabled else 1,
             )
 
@@ -136,9 +142,11 @@ class EquipmentService:
                 self.cmds, config.constraint
             )
             return enabled
-        require_attribute(self.cmds, config.constraint, "nodeState")
+        constraint = require_attribute(
+            self.cmds, config.constraint, "nodeState"
+        )
         return self.cmds.getAttr(
-            attribute(config.constraint, "nodeState")
+            attribute(constraint, "nodeState")
         ) == 0
 
     def _constraint_aliases(self, constraint: str) -> Sequence[str]:
@@ -151,8 +159,10 @@ class EquipmentService:
         config: EquipmentConfig,
         side: Side,
     ) -> None:
-        require_attribute(self.cmds, config.constraint, "nodeState")
-        self.cmds.setAttr(attribute(config.constraint, "nodeState"), 0)
+        constraint = require_attribute(
+            self.cmds, config.constraint, "nodeState"
+        )
+        self.cmds.setAttr(attribute(constraint, "nodeState"), 0)
         left_alias, right_alias = resolve_side_aliases(
             self._constraint_aliases(config.constraint)
         )
@@ -169,7 +179,9 @@ class EquipmentService:
             raise EquipmentAttributeError(
                 "No space attribute configured for {}".format(config.name)
             )
-        require_attribute(self.cmds, config.control, config.space_attribute)
+        control = require_attribute(
+            self.cmds, config.control, config.space_attribute
+        )
         self.cmds.setAttr(
-            attribute(config.control, config.space_attribute), value
+            attribute(control, config.space_attribute), value
         )

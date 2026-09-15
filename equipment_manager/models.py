@@ -1,4 +1,4 @@
-"""Typed configuration and runtime state for Equipment Manager."""
+"""Typed configuration and runtime state for Equipment-Manager."""
 
 from dataclasses import dataclass
 from enum import Enum

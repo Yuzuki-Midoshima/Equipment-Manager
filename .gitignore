@@ -26,7 +26,7 @@ dist/
 
 # Logs and local distribution archives
 *.log
-/EquipmentManager_*.zip
+/Equipment-Manager_*.zip
 
 # Maya-generated backup, autosave, and preview data
 autosave/

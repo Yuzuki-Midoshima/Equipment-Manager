@@ -2,7 +2,7 @@
 
 
 class EquipmentManagerError(RuntimeError):
-    """Base class for expected Equipment Manager failures."""
+    """Base class for expected Equipment-Manager failures."""
 
 
 class EquipmentNodeError(EquipmentManagerError):

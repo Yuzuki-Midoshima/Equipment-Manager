@@ -224,13 +224,13 @@ class EquipmentController:
         try:
             operation()
         except (EquipmentManagerError, ValueError, RuntimeError) as exc:
-            self.cmds.warning("Equipment Manager: {}".format(exc))
+            self.cmds.warning("Equipment-Manager: {}".format(exc))
 
     def _run_safely(self, operation: Callable[[], None]) -> None:
         try:
             operation()
         except (EquipmentManagerError, ValueError, RuntimeError) as exc:
-            self.cmds.warning("Equipment Manager: {}".format(exc))
+            self.cmds.warning("Equipment-Manager: {}".format(exc))
             self._show_status("ERROR: {}".format(exc))
 
     def _refresh_ui(self) -> None:

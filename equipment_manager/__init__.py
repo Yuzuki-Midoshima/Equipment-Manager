@@ -1,4 +1,4 @@
-"""Equipment Manager public package API."""
+"""Equipment-Manager public package API."""
 
 from .app import EquipmentManagerApp
 

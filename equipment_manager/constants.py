@@ -1,4 +1,4 @@
-"""All UI and rig-dependent constants used by Equipment Manager."""
+"""All UI and rig-dependent constants used by Equipment-Manager."""
 
 from .models import ArrowConfig, EquipmentConfig, StringConfig
 

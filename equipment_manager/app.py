@@ -1,4 +1,4 @@
-"""Composition root for Equipment Manager."""
+"""Composition root for Equipment-Manager."""
 
 from typing import Any
 

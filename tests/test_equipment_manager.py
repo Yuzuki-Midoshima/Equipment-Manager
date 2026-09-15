@@ -14,8 +14,10 @@ from equipment_manager.controller import EquipmentController
 from equipment_manager.exceptions import (
     ConstraintStateError,
     EquipmentAttributeError,
+    EquipmentNodeError,
 )
 from equipment_manager.maya_utils import (
+    require_attribute,
     resolve_side_aliases,
     side_weights,
 )
@@ -407,6 +409,47 @@ class UtilityAndLabelTests(unittest.TestCase):
             resolve_side_aliases(("R_socketW1", "L_socketW0")),
             ("L_socketW0", "R_socketW1"),
         )
+
+    def test_attribute_uses_long_name_from_same_rig_hierarchy(self):
+        class AmbiguousCmds:
+            attrs = {"|hero|L_arm_settings_anim.FKIK": 1}
+
+            def ls(self, node, long=False):
+                matches = {
+                    "L_arm_settings_anim": [
+                        "|hero|L_arm_settings_anim",
+                        "|prop|L_arm_settings_anim",
+                    ],
+                    "String_anim": ["|hero|String_anim"],
+                }
+                return matches.get(node, [node])
+
+            def objExists(self, node):
+                return node == "|hero|L_arm_settings_anim"
+
+            def attributeQuery(self, name, node, exists):
+                return exists and "{}.{}".format(node, name) in self.attrs
+
+        cmds = AmbiguousCmds()
+        self.assertEqual(
+            require_attribute(
+                cmds,
+                "L_arm_settings_anim",
+                "FKIK",
+                context="String_anim",
+            ),
+            "|hero|L_arm_settings_anim",
+        )
+
+    def test_ambiguous_node_without_shared_context_is_rejected(self):
+        class AmbiguousCmds:
+            def ls(self, node, long=False):
+                return ["|one|duplicate", "|two|duplicate"]
+
+        with self.assertRaisesRegex(EquipmentNodeError, "ambiguous"):
+            require_attribute(
+                AmbiguousCmds(), "duplicate", "value", context="context"
+            )
 
     def test_ui_labels(self):
         self.assertEqual(

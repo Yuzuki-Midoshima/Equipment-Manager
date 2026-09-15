@@ -1,4 +1,4 @@
-"""Maya UI construction and rendering for Equipment Manager."""
+"""Maya UI construction and rendering for Equipment-Manager."""
 
 from typing import Any, Dict, Optional
 
@@ -293,10 +293,10 @@ class EquipmentManagerUI:
     def _create_pose_controls(self) -> None:
         self.cmds.setParent(self.controls["bow_options"])
         self.cmds.separator(h=12)
-        self.cmds.text(label="BOW & ARROW", align="left")
+        self.cmds.text(label="Bow & Arrow", align="left")
         pose_form = self.cmds.formLayout(height=24)
         self.controls["arrow_allow_save"] = self.cmds.button(
-            label="ALLOW SAVE", h=24,
+            label="ARROW SAVE", h=24,
             c=lambda *_: self.controller.save_arrow_pose(),
         )
         self.controls["arrow_reset"] = self.cmds.button(

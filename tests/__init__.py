@@ -1,1 +1,1 @@
-"""Maya-independent tests for Equipment Manager."""
+"""Maya-independent tests for Equipment-Manager."""

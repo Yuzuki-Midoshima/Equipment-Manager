@@ -18,23 +18,84 @@ def attribute(node: str, name: str) -> str:
     return "{}.{}".format(node, name)
 
 
-def require_node(cmds: MayaCommands, node: str) -> None:
-    """Raise a user-facing domain error when a configured node is absent."""
-    if not cmds.objExists(node):
+def resolve_node(
+    cmds: MayaCommands,
+    node: str,
+    context: Optional[str] = None,
+) -> str:
+    """Return an unambiguous Maya node name, preferring its rig hierarchy.
+
+    Maya accepts short DAG names until two nodes share the same leaf name.  In
+    that case commands such as ``attributeQuery`` raise a raw ``TypeError``.
+    Long names avoid that failure.  When a context node is supplied, the
+    candidate sharing the deepest DAG ancestry with it is selected.
+    """
+    ls = getattr(cmds, "ls", None)
+    if ls is None:
+        return node
+
+    matches = ls(node, long=True) or []
+    if not matches:
+        return node
+    if len(matches) == 1:
+        return matches[0]
+
+    if context:
+        context_matches = ls(context, long=True) or []
+        if len(context_matches) == 1:
+            context_parts = context_matches[0].split("|")[1:-1]
+
+            def shared_ancestry(candidate: str) -> int:
+                candidate_parts = candidate.split("|")[1:-1]
+                count = 0
+                for left, right in zip(context_parts, candidate_parts):
+                    if left != right:
+                        break
+                    count += 1
+                return count
+
+            scores = [(shared_ancestry(item), item) for item in matches]
+            best_score = max(score for score, _item in scores)
+            best = [item for score, item in scores if score == best_score]
+            if best_score > 0 and len(best) == 1:
+                return best[0]
+
+    raise EquipmentNodeError(
+        "Maya node name is ambiguous: {} (matches: {})".format(
+            node, ", ".join(matches)
+        )
+    )
+
+
+def require_node(
+    cmds: MayaCommands,
+    node: str,
+    context: Optional[str] = None,
+) -> str:
+    """Return a long node name or raise a user-facing domain error."""
+    resolved = resolve_node(cmds, node, context=context)
+    if not cmds.objExists(resolved):
         raise EquipmentNodeError(
             "Required Maya node was not found: {}".format(node)
         )
+    return resolved
 
 
-def require_attribute(cmds: MayaCommands, node: str, name: str) -> None:
-    """Raise a domain error when a required attribute is absent."""
-    require_node(cmds, node)
-    if not cmds.attributeQuery(name, node=node, exists=True):
+def require_attribute(
+    cmds: MayaCommands,
+    node: str,
+    name: str,
+    context: Optional[str] = None,
+) -> str:
+    """Return a long node name or raise when its attribute is absent."""
+    resolved = require_node(cmds, node, context=context)
+    if not cmds.attributeQuery(name, node=resolved, exists=True):
         raise EquipmentAttributeError(
             "Required Maya attribute was not found: {}".format(
-                attribute(node, name)
+                attribute(resolved, name)
             )
         )
+    return resolved
 
 
 def resolve_side_aliases(aliases: Sequence[str]) -> Tuple[str, str]:
@@ -67,7 +128,7 @@ def read_constraint_side(
     Zero weights mean Follow OFF and no observable side. Simultaneously active
     left and right weights are rejected because the UI cannot represent them.
     """
-    require_node(cmds, constraint)
+    constraint = require_node(cmds, constraint)
     aliases = cmds.parentConstraint(constraint, q=True, wal=True) or []
     left_alias, right_alias = resolve_side_aliases(aliases)
     left_active = cmds.getAttr(attribute(constraint, left_alias)) > tolerance
@@ -87,13 +148,14 @@ def ensure_transform_attributes(
     cmds: MayaCommands,
     control: str,
     channels: Iterable[str],
-) -> None:
-    require_node(cmds, control)
+) -> str:
+    control = require_node(cmds, control)
     for side in Side:
         for channel in channels:
             name = "{}Grip_{}".format(side.value, channel)
             if not cmds.attributeQuery(name, node=control, exists=True):
                 cmds.addAttr(control, ln=name, at="double")
+    return control
 
 
 def save_transform_offset(
@@ -102,7 +164,7 @@ def save_transform_offset(
     side: Side,
     channels: Iterable[str],
 ) -> None:
-    ensure_transform_attributes(cmds, control, channels)
+    control = ensure_transform_attributes(cmds, control, channels)
     for channel in channels:
         cmds.setAttr(
             attribute(control, "{}Grip_{}".format(side.value, channel)),
@@ -116,7 +178,7 @@ def apply_transform_offset(
     side: Side,
     channels: Iterable[str],
 ) -> None:
-    ensure_transform_attributes(cmds, control, channels)
+    control = ensure_transform_attributes(cmds, control, channels)
     for channel in channels:
         cmds.setAttr(
             attribute(control, channel),

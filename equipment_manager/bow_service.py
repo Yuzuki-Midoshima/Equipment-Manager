@@ -108,8 +108,12 @@ class BowService:
         arm = "R" if bow_side is Side.LEFT else "L"
         settings = "{}_arm_settings_anim".format(arm)
         hand = "Ik_{}_hand_anim".format(arm)
-        require_node(self.cmds, settings)
-        require_attribute(self.cmds, settings, "FKIK")
+        settings = require_attribute(
+            self.cmds,
+            settings,
+            "FKIK",
+            context=self.string.control,
+        )
         if enabled:
             self._match_ik_controls_to_joints(arm, settings)
             require_node(self.cmds, hand)
@@ -129,7 +133,12 @@ class BowService:
             return None
         arm = "R" if bow_side is Side.LEFT else "L"
         settings = "{}_arm_settings_anim".format(arm)
-        require_attribute(self.cmds, settings, "FKIK")
+        settings = require_attribute(
+            self.cmds,
+            settings,
+            "FKIK",
+            context=self.string.control,
+        )
         return bool(self.cmds.getAttr(attribute(settings, "FKIK")))
 
     def _match_fk_controls_to_joints(self, arm: str) -> None:
