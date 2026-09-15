@@ -56,6 +56,7 @@ STRING_CONFIG = StringConfig(
     control="String_anim",
     draw_attributes=("Normal_Draw", "Light_Draw", "FullDraw"),
     translate_attributes=("translateX", "translateY", "translateZ"),
+    rotate_attributes=("rotateX", "rotateY", "rotateZ"),
     fk_match_pairs=(
         ("IK_{side}_shoulder_jnt", "FK_{side}_shoulder_anim"),
         ("IK_{side}_elbow_jnt", "FK_{side}_elbow_anim"),

@@ -45,6 +45,7 @@ class StringConfig:
     control: str
     draw_attributes: Tuple[str, ...]
     translate_attributes: Tuple[str, ...]
+    rotate_attributes: Tuple[str, ...]
     fk_match_pairs: Tuple[Tuple[str, str], ...]
     ik_shoulder_joint: str
     ik_elbow_joint: str

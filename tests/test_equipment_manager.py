@@ -80,7 +80,17 @@ class FakeSceneCmds:
             "Arrow_Follow_GRP_parentConstraint1.R_arrowW1": 0,
             "L_arm_settings_anim.FKIK": 0,
             "R_arm_settings_anim.FKIK": 0,
+            "String_anim.Normal_Draw": 1,
+            "String_anim.Light_Draw": 1,
+            "String_anim.FullDraw": 1,
+            "String_anim.translateX": 1,
+            "String_anim.translateY": 2,
+            "String_anim.translateZ": 3,
+            "String_anim.rotateX": 10,
+            "String_anim.rotateY": 20,
+            "String_anim.rotateZ": 30,
         }
+        self.destination_plugs = set()
         self.matrices = {
             "Arrow_LOC": list(range(16)),
             "String_Reset_LOC": list(reversed(range(16))),
@@ -107,6 +117,9 @@ class FakeSceneCmds:
     def setAttr(self, plug, value):
         self.set_attr_calls.append((plug, value))
         self.attrs[plug] = value
+
+    def connectionInfo(self, plug, isDestination=False):
+        return isDestination and plug in self.destination_plugs
 
     def parentConstraint(self, constraint, q=False, wal=False):
         if q and wal:
@@ -276,6 +289,23 @@ class BowServiceStateTests(unittest.TestCase):
         self.assertEqual(
             self.service.get_arrow_scene_state(), (Side.LEFT, True)
         )
+
+    def test_string_release_zeros_translate_and_rotate_channels(self):
+        self.service.release_string()
+
+        for channel in (
+            "translateX", "translateY", "translateZ",
+            "rotateX", "rotateY", "rotateZ",
+        ):
+            self.assertEqual(self.cmds.attrs["String_anim." + channel], 0)
+
+    def test_string_release_preserves_connected_transform_channels(self):
+        self.cmds.destination_plugs.add("String_anim.rotateY")
+
+        self.service.release_string()
+
+        self.assertEqual(self.cmds.attrs["String_anim.rotateY"], 20)
+        self.assertEqual(self.cmds.attrs["String_anim.rotateX"], 0)
 
     def test_arrow_reset_snaps_body_to_string_reference(self):
         expected = self.cmds.matrices["String_Reset_LOC"]

@@ -95,7 +95,10 @@ class BowService:
                 name, node=self.string.control, exists=True
             ):
                 self.cmds.setAttr(attribute(self.string.control, name), 0)
-        for name in self.string.translate_attributes:
+        transform_attributes = (
+            self.string.translate_attributes + self.string.rotate_attributes
+        )
+        for name in transform_attributes:
             plug = attribute(self.string.control, name)
             if not self.cmds.connectionInfo(plug, isDestination=True):
                 self.cmds.setAttr(plug, 0)
