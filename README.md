@@ -421,7 +421,7 @@ ConstraintについてもWeight Aliasを動的に取得し、左右両方のWeig
 
 Mayaに依存しない処理については、Fake `maya.cmds` を使用したUnit Testを用意しています。
 
-現在、**24件のUnit Test**で以下の処理を検証しています。
+現在、**Unit Test**で以下の処理を検証しています。
 
 * Space値と持ち手判定
 * Constraint Weight
