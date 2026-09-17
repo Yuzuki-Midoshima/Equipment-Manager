@@ -10,7 +10,9 @@
   <img src="docs/images/shield-controls.png" width="47%">
 </p>
 
-![Bow controls](docs/images/bow-controls.png)
+<p align="center">
+  <img src="docs/images/bow-controls.png" width="52%">
+</p>
 
 Autodesk Maya 2026向けの、**武器の持ち替えや追従、装備状態に応じたリグ制御を管理するアニメーション支援ツール**です。
 
