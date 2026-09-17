@@ -84,7 +84,7 @@ Autodesk Maya 2026向けの、**武器の持ち替えや追従、装備状態に
 
 ---
 
-###　矢の持ち手・追従切り替え
+### 矢の持ち手・追従切り替え
 
 ![Arrow Switching](docs/gifs/arrow-switching.gif)
 
