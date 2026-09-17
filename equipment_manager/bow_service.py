@@ -68,25 +68,96 @@ class BowService:
         )
 
     def save_arrow_pose(self) -> None:
-        """Save the Arrow body position into the String reset reference."""
-        require_node(self.cmds, self.arrow.body)
-        require_node(self.cmds, self.arrow.reset_reference)
-        matrix = self.cmds.xform(
-            self.arrow.body, q=True, ws=True, matrix=True
+        """Save the visible Arrow pose relative to the Bow control."""
+        body = require_node(
+            self.cmds, self.arrow.body, context=self.arrow.control
+        )
+        control = require_node(
+            self.cmds, self.arrow.control, context=body
+        )
+        reset_reference = require_node(
+            self.cmds, self.arrow.reset_reference, context=body
+        )
+        bow_reference = require_node(
+            self.cmds, self.arrow.bow_reference, context=control
+        )
+        arrow_matrix = self.cmds.xform(
+            control, q=True, ws=True, matrix=True
+        )
+        bow_matrix = self.cmds.xform(
+            bow_reference, q=True, ws=True, matrix=True
+        )
+        relative_matrix = self._multiply_matrices(
+            arrow_matrix, self._inverse_matrix(bow_matrix)
         )
         self.cmds.xform(
-            self.arrow.reset_reference, ws=True, matrix=matrix
+            reset_reference, objectSpace=True, matrix=relative_matrix
         )
 
     def reset_arrow_pose(self) -> None:
-        """Snap Arrow_LOC once to String_Reset_LOC without reparenting."""
-        require_node(self.cmds, self.arrow.body)
-        require_node(self.cmds, self.arrow.reset_reference)
-        matrix = self.cmds.xform(
-            self.arrow.reset_reference, q=True, ws=True, matrix=True
+        """Restore the Arrow control relative to the moving bow reference."""
+        body = require_node(
+            self.cmds, self.arrow.body, context=self.arrow.control
         )
-        self.cmds.xform(self.arrow.body, ws=True, matrix=matrix)
+        control = require_node(
+            self.cmds, self.arrow.control, context=body
+        )
+        reset_reference = require_node(
+            self.cmds, self.arrow.reset_reference, context=body
+        )
+        bow_reference = require_node(
+            self.cmds, self.arrow.bow_reference, context=control
+        )
+        relative_matrix = self.cmds.xform(
+            reset_reference, q=True, objectSpace=True, matrix=True
+        )
+        bow_matrix = self.cmds.xform(
+            bow_reference, q=True, ws=True, matrix=True
+        )
+        matrix = self._multiply_matrices(
+            relative_matrix, bow_matrix
+        )
+        self.cmds.xform(control, ws=True, matrix=matrix)
         self.cmds.refresh(force=True)
+
+    @staticmethod
+    def _multiply_matrices(left, right):
+        """Multiply two flat row-major 4x4 matrices."""
+        return [
+            sum(
+                left[row * 4 + index] * right[index * 4 + column]
+                for index in range(4)
+            )
+            for row in range(4)
+            for column in range(4)
+        ]
+
+    @staticmethod
+    def _inverse_matrix(matrix):
+        """Invert a flat 4x4 matrix using Gauss-Jordan elimination."""
+        rows = [
+            list(matrix[row * 4:(row + 1) * 4])
+            + [float(row == column) for column in range(4)]
+            for row in range(4)
+        ]
+        for column in range(4):
+            pivot = max(
+                range(column, 4), key=lambda row: abs(rows[row][column])
+            )
+            if abs(rows[pivot][column]) < 1.0e-12:
+                raise ValueError("Bow reference matrix is not invertible")
+            rows[column], rows[pivot] = rows[pivot], rows[column]
+            scale = rows[column][column]
+            rows[column] = [value / scale for value in rows[column]]
+            for row in range(4):
+                if row == column:
+                    continue
+                factor = rows[row][column]
+                rows[row] = [
+                    rows[row][index] - factor * rows[column][index]
+                    for index in range(8)
+                ]
+        return [rows[row][column] for row in range(4) for column in range(4, 8)]
 
     def release_string(self) -> None:
         require_node(self.cmds, self.string.control)

@@ -50,6 +50,7 @@ ARROW_CONFIG = ArrowConfig(
     constraint="Arrow_Follow_GRP_parentConstraint1",
     body="Arrow_LOC",
     reset_reference="String_Reset_LOC",
+    bow_reference="ALL_Bow_anim",
 )
 
 STRING_CONFIG = StringConfig(

@@ -36,6 +36,7 @@ class ArrowConfig:
     constraint: str
     body: str
     reset_reference: str
+    bow_reference: str
 
 
 @dataclass(frozen=True)

@@ -92,8 +92,15 @@ class FakeSceneCmds:
         }
         self.destination_plugs = set()
         self.matrices = {
+            "Arrow_anim": [100 + value for value in range(16)],
             "Arrow_LOC": list(range(16)),
             "String_Reset_LOC": list(reversed(range(16))),
+            "ALL_Bow_anim": [
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1,
+            ],
             "IK_L_shoulder_jnt": [1] * 16,
             "IK_L_elbow_jnt": [2] * 16,
             "IK_L_wrist_jnt": [3] * 16,
@@ -134,6 +141,7 @@ class FakeSceneCmds:
         matrix=None,
         t=False,
         rotation=False,
+        objectSpace=False,
     ):
         if q:
             if t:
@@ -290,6 +298,49 @@ class BowServiceStateTests(unittest.TestCase):
             self.service.get_arrow_scene_state(), (Side.LEFT, True)
         )
 
+    def test_arrow_save_stores_visible_control_pose(self):
+        expected = self.cmds.matrices["Arrow_anim"]
+
+        self.service.save_arrow_pose()
+
+        self.assertEqual(
+            self.cmds.xform_calls,
+            [("String_Reset_LOC", expected)],
+        )
+
+    def test_arrow_reset_uses_reference_pose_after_bow_moves(self):
+        saved_relative = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            2, 3, 4, 1,
+        ]
+        moved_bow = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            10, 20, 30, 1,
+        ]
+        self.cmds.matrices["String_Reset_LOC"] = saved_relative
+        self.cmds.matrices["ALL_Bow_anim"] = moved_bow
+
+        self.service.reset_arrow_pose()
+
+        self.assertEqual(
+            self.cmds.xform_calls,
+            [
+                (
+                    "Arrow_anim",
+                    [
+                        1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, 0,
+                        12, 23, 34, 1,
+                    ],
+                )
+            ],
+        )
+
     def test_string_release_zeros_translate_and_rotate_channels(self):
         self.service.release_string()
 
@@ -307,10 +358,62 @@ class BowServiceStateTests(unittest.TestCase):
         self.assertEqual(self.cmds.attrs["String_anim.rotateY"], 20)
         self.assertEqual(self.cmds.attrs["String_anim.rotateX"], 0)
 
-    def test_arrow_reset_snaps_body_to_string_reference(self):
+    def test_arrow_reset_snaps_control_to_string_reference(self):
         expected = self.cmds.matrices["String_Reset_LOC"]
         self.service.reset_arrow_pose()
-        self.assertEqual(self.cmds.xform_calls, [("Arrow_LOC", expected)])
+        self.assertEqual(
+            self.cmds.xform_calls,
+            [("Arrow_anim", expected)],
+        )
+
+    def test_arrow_reset_uses_resolved_nodes_from_same_rig(self):
+        class DuplicateArrowCmds(FakeSceneCmds):
+            def __init__(self):
+                super().__init__()
+                self.nodes.update(
+                    {
+                        "|hero|Arrow_LOC",
+                        "|hero|String_Reset_LOC",
+                    }
+                )
+                self.matrices["|hero|String_Reset_LOC"] = [42] * 16
+                self.matrices["|hero|ALL_Bow_anim"] = [
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1,
+                ]
+
+            def ls(self, node, long=False):
+                matches = {
+                    "Arrow_anim": ["|hero|Arrow_anim"],
+                    "Arrow_LOC": [
+                        "|hero|Arrow_LOC",
+                        "|prop|Arrow_LOC",
+                    ],
+                    "String_Reset_LOC": [
+                        "|hero|String_Reset_LOC",
+                        "|prop|String_Reset_LOC",
+                    ],
+                    "ALL_Bow_anim": ["|hero|ALL_Bow_anim"],
+                }
+                return matches.get(node, [node])
+
+            def objExists(self, node):
+                return node in self.nodes or node in {
+                    "|hero|Arrow_anim",
+                    "|hero|ALL_Bow_anim",
+                }
+
+        cmds = DuplicateArrowCmds()
+        service = BowService(cmds, ARROW_CONFIG, STRING_CONFIG)
+
+        service.reset_arrow_pose()
+
+        self.assertEqual(
+            cmds.xform_calls,
+            [("|hero|Arrow_anim", [42] * 16)],
+        )
 
     def test_string_follow_reads_arm_selected_by_bow_space_side(self):
         equipment_service = EquipmentService(
