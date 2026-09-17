@@ -20,6 +20,9 @@ from .models import ArrowConfig, Side, StringConfig
 class BowService:
     """Mutate Arrow and String nodes defined by the rig configuration."""
 
+    POLE_DISTANCE_SCALE = 0.25
+    POLE_Y_OFFSET = -200.0
+
     def __init__(
         self,
         cmds_module: Any,
@@ -189,10 +192,17 @@ class BowService:
             context=self.string.control,
         )
         if enabled:
+            string_control = require_node(self.cmds, self.string.control)
+            hand = require_node(
+                self.cmds, hand, context=string_control
+            )
+            if bool(self.cmds.getAttr(attribute(settings, "FKIK"))):
+                self.cmds.select(string_control, hand, r=True)
+                self.cmds.setToolTo("Move")
+                return
             self._match_ik_controls_to_joints(arm, settings)
-            require_node(self.cmds, hand)
-            require_node(self.cmds, self.string.control)
-            self.cmds.select(hand, self.string.control, r=True)
+            # Select the IK hand last so it becomes Maya's active object.
+            self.cmds.select(string_control, hand, r=True)
             self.cmds.setToolTo("Move")
         else:
             self._match_fk_controls_to_joints(arm)
@@ -248,11 +258,14 @@ class BowService:
             wrist,
         )
 
+        # Preserve the hand controller's rig-specific offset by matching it
+        # before the mode switch. The pole is applied afterwards because its
+        # parent hierarchy is reevaluated when FKIK changes.
         self.cmds.matchTransform(
             names["hand"], names["wrist"], pos=True, rot=True
         )
-        self.cmds.xform(names["pole"], ws=True, t=pole_position)
         self.cmds.setAttr(attribute(settings, "FKIK"), 1)
+        self.cmds.xform(names["pole"], ws=True, t=pole_position)
 
     def _world_position(self, node: str) -> Tuple[float, float, float]:
         values = self.cmds.xform(node, q=True, ws=True, t=True)
@@ -283,11 +296,22 @@ class BowService:
             raise ValueError(
                 "Cannot calculate pole vector from a straight arm"
             )
-        distance = cls._length(shoulder_to_elbow) + cls._length(
-            cls._subtract(wrist, elbow)
+        distance = (
+            cls._length(shoulder_to_elbow)
+            + cls._length(cls._subtract(wrist, elbow))
+        ) * cls.POLE_DISTANCE_SCALE
+        # Measure the pole distance from the shoulder-to-wrist axis. Starting
+        # at the elbow adds the elbow's existing offset a second time and can
+        # send the pole control far above the character on strongly bent arms.
+        pole = cls._add(
+            projection,
+            cls._scale(cls._normalize(direction), distance),
         )
-        pole = cls._add(elbow, cls._scale(cls._normalize(direction), distance))
-        return pole
+        # Bow poses can make the arm-plane normal point steeply upward. Keep
+        # the pole at or below the lowest arm joint so it cannot jump above
+        # the character while retaining the calculated horizontal direction.
+        clamped_y = min(pole[1], shoulder[1], elbow[1], wrist[1])
+        return pole[0], clamped_y + cls.POLE_Y_OFFSET, pole[2]
 
     @staticmethod
     def _add(left, right):

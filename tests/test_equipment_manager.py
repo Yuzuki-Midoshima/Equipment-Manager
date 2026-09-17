@@ -1,6 +1,5 @@
 """Maya-independent behavior tests using lightweight ``cmds`` fakes."""
 
-import math
 import unittest
 
 from equipment_manager.app import EquipmentManagerApp
@@ -34,6 +33,7 @@ class FakeSceneCmds:
         self.set_attr_calls = []
         self.xform_calls = []
         self.match_transform_calls = []
+        self.select_calls = []
         self.nodes = {
             "Sword_CTRL",
             "Sword_Follow_GRP_parentConstraint1",
@@ -161,8 +161,8 @@ class FakeSceneCmds:
     def setToolTo(self, _tool):
         pass
 
-    def select(self, *_args, **_kwargs):
-        pass
+    def select(self, *args, **kwargs):
+        self.select_calls.append((args, kwargs))
 
     def warning(self, message):
         self.messages.append(message)
@@ -454,6 +454,23 @@ class BowServiceStateTests(unittest.TestCase):
             "IK_L_elbow_anim",
             [call[0] for call in self.cmds.xform_calls],
         )
+        self.assertEqual(
+            self.cmds.select_calls,
+            [(("String_anim", "Ik_L_hand_anim"), {"r": True})],
+        )
+
+    def test_follow_on_again_only_reselects_string_and_ik_hand(self):
+        self.cmds.attrs["L_arm_settings_anim.FKIK"] = 1
+
+        self.service.set_string_follow(True, Side.RIGHT)
+
+        self.assertEqual(self.cmds.match_transform_calls, [])
+        self.assertEqual(self.cmds.xform_calls, [])
+        self.assertEqual(self.cmds.set_attr_calls, [])
+        self.assertEqual(
+            self.cmds.select_calls,
+            [(("String_anim", "Ik_L_hand_anim"), {"r": True})],
+        )
 
     def test_pole_position_stays_on_arm_plane(self):
         result = self.service._calculate_pole_position(
@@ -462,7 +479,7 @@ class BowServiceStateTests(unittest.TestCase):
             wrist=(2.0, 0.0, 0.0),
         )
         self.assertAlmostEqual(result[0], 1.0)
-        self.assertAlmostEqual(result[1], 1.0 + 2.0 * math.sqrt(2.0))
+        self.assertAlmostEqual(result[1], -200.0)
         self.assertAlmostEqual(result[2], 0.0)
 
 
